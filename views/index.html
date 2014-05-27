@@ -16,7 +16,8 @@
 
 		socket.on('updatechat', function (username, data) {
 			// if someone sends a chat message, append it to the conversation
-			$('#conversation').append('<b>'+username + ':</b> ' + data + '<br>');
+			message = decryptMessage(data);
+			$('#conversation').append('<b>'+username + ':</b> ' + message + '<br>');
 		});
 
 		socket.on('updateusers', function(new_username, users, old_username){
@@ -31,6 +32,9 @@
 			}
 			// update the current user/pubkey hash
 			current_users = userListToHash(users);
+			updateTargetSelector();
+
+
 			$('#pkeys').empty();
 			for(key in current_users){
 				$('#pkeys').append(key);
@@ -68,6 +72,13 @@
 		socket.emit('switchroom', room);
 	}
 
+	function updateTargetSelector(){
+		var key;
+		$('#targets').empty();
+		for(key in current_users){
+			$('#targets').append($('<option>').attr('value', key).text(key));
+		}
+	}
 	// on load of page
 	$(function(){
 		$('#connect').click(function(){
@@ -75,9 +86,25 @@
 			initWebSockets();
 		});
 		$('#send').click(function(){
-			socket.emit('sendchat', $('#text').val());
+			var data = encryptMessage($('#text').val(), $('#targets').val());
+			socket.emit('sendchat', data);
 		});
 	});
+
+	function encryptMessage(data, target){
+		pubkey = current_users[target];
+		var crypto = new JSEncrypt();
+		crypto.setPublicKey(pubkey);
+		return crypto.encrypt(data);
+	}
+
+	function decryptMessage(data){
+		decrypted_message = crypt.decrypt(data);
+		if(decrypted_message){
+			return decrypted_message;
+		}
+		return data;
+	}
 
 	var crypt;
 	function generateKeys(){
@@ -101,8 +128,11 @@
 <p id="rooms"></p>
 <p id="conversation"></p>
 <input id="text"></input>
+<select id="targets"></select>
 <button id="send">Send</button>
+
 <br></br>
+
 <input id="username"></input>
 <button id="connect">Connect</button>
 <p id="pkeys"></p>
