@@ -10,7 +10,7 @@ var http = require('http');
 var path = require('path');
 var redis = require('redis');
 
-redisClient = redis.createClient(process.env.REDISHOST || null, process.env.REDISPORT || null, {auth_pass: process.enc.REDISPASS || null});
+redisClient = redis.createClient(process.env.REDISHOST || null, process.env.REDISPORT || null, {auth_pass: process.env.REDISPASS || null});
 redisClient.on('error', function(err){
 	console.log("Redis Error: " + err);
 })
