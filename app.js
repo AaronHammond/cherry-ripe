@@ -10,11 +10,11 @@ var http = require('http');
 var path = require('path');
 var redis = require('redis');
 
-client = redis.createClient();
-client.on('error', function(err){
+redisClient = redis.createClient();
+redisClient.on('error', function(err){
 	console.log("Redis Error: " + err);
 })
-
+redisClient.flushdb();
 
 var app = express();
 
@@ -45,29 +45,63 @@ http_app = http.createServer(app).listen(app.get('port'), function(){
 
 var io = require('socket.io').listen(http_app);
 
-// usernames which are currently connected to the chat
-var usernames = {};
-
 // rooms which are currently available in chat
-var rooms = ['room1','room2','room3'];
+var rooms = ['Avesta', 'Nirvana', 'Valhalla'];
+
+
+function updateUserRoom(socket, room){
+	console.log('adding ' + socket.username + ' to ' + room);
+	if(socket.room){
+		// leave the room
+		socket.leave(socket.room);
+		// remove them from the redis set for the room
+		redisClient.srem(socket.room+":users", socketToRedisValue(socket));
+		// tell the old room that the user left, and send the updated list to all folks in the room
+		emitRoomUsersLeaving(socket);
+	}
+	// update the room name on the socket
+	socket.room = room;
+	// add the socket to the redis set for the room
+	redisClient.sadd(room+":users", socketToRedisValue(socket));
+	// join the room
+	socket.join(room);
+	// tell the new room that the user is joining, and send the updated list to all folks in the room
+	emitRoomUsersEntering(socket);
+	// update the room list for the user
+	socket.emit('updaterooms', rooms, room);
+}
+
+
+function emitRoomUsersEntering(socket){
+	redisClient.smembers(socket.room+":users", function(err, users){
+		if(!users){
+			users = []
+		}
+		io.sockets.in(socket.room).emit('updateusers', socket.username, users);
+	});
+}
+
+function emitRoomUsersLeaving(socket){
+	redisClient.smembers(socket.room+":users", function(err, users){
+		if(!users){
+			users = []
+		}
+		io.sockets.in(socket.room).emit('updateusers', null, users, socket.username);
+	});
+}
+
+function socketToRedisValue(socket){
+	return socket.username + socket.pubkey;
+}
+
 
 io.sockets.on('connection', function (socket) {
 
-	// when the client emits 'adduser', this listens and executes
-	socket.on('adduser', function(username){
-		// store the username in the socket session for this client
+	socket.on('adduser', function(username, pubkey){
 		socket.username = username;
-		// store the room name in the socket session for this client
-		socket.room = 'room1';
-		// add the client's username to the global list
-		usernames[username] = username;
-		// send client to room 1
-		socket.join('room1');
-		// echo to client they've connected
-		socket.emit('updatechat', 'SERVER', 'you have connected to room1');
-		// echo to room 1 that a person has connected to their room
-		socket.broadcast.to('room1').emit('updatechat', 'SERVER', username + ' has connected to this room');
-		socket.emit('updaterooms', rooms, 'room1');
+		socket.pubkey = pubkey;
+		// set the user room
+		updateUserRoom(socket, 'Avesta');
 	});
 
 	// when the client emits 'sendchat', this listens and executes
@@ -76,28 +110,18 @@ io.sockets.on('connection', function (socket) {
 		io.sockets.in(socket.room).emit('updatechat', socket.username, data);
 	});
 
-	socket.on('switchRoom', function(newroom){
-		// leave the current room (stored in session)
-		socket.leave(socket.room);
-		// join new room, received as function parameter
-		socket.join(newroom);
-		socket.emit('updatechat', 'SERVER', 'you have connected to '+ newroom);
-		// sent message to OLD room
-		socket.broadcast.to(socket.room).emit('updatechat', 'SERVER', socket.username+' has left this room');
-		// update socket session room title
-		socket.room = newroom;
-		socket.broadcast.to(newroom).emit('updatechat', 'SERVER', socket.username+' has joined this room');
-		socket.emit('updaterooms', rooms, newroom);
+	socket.on('switchroom', function(newroom){
+		// when the user switches a room, update the appropriate rooms
+		updateUserRoom(socket, newroom);
 	});
 
 	// when the user disconnects.. perform this
 	socket.on('disconnect', function(){
-		// remove the username from global usernames list
-		delete usernames[socket.username];
-		// update list of users in chat, client-side
-		io.sockets.emit('updateusers', usernames);
-		// echo globally that this client has left
-		socket.broadcast.emit('updatechat', 'SERVER', socket.username + ' has disconnected');
+		// remove the user from the redis set for that room
+		redisClient.srem(socket.room+":users", socketToRedisValue(socket));
+		// leave the room
 		socket.leave(socket.room);
+		// let the old room know that the user left, and give them the updated list of users
+		emitRoomUsersLeaving(socket);
 	});
 });
