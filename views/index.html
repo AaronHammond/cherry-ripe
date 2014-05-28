@@ -7,7 +7,7 @@
 	var socket;
 	var current_users = {};
 	function initWebSockets(){
-		socket = io.connect(location.origin);
+		socket = io.connect(location.origin, {'connect timeout': 1000});
 
 		socket.on('connect', function(){
 			// add the user with the username and the generated public key
@@ -95,7 +95,10 @@
 		pubkey = current_users[target];
 		var crypto = new JSEncrypt();
 		crypto.setPublicKey(pubkey);
-		return crypto.encrypt(data);
+		// encrypt returns the message both in BigInteger form (bi) and base16 string form (s)
+
+		// TODO: check whether bi is greater than the lowest public key modulus
+		return crypto.encrypt(data).s;
 	}
 
 	function decryptMessage(data){

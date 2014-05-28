@@ -1421,7 +1421,7 @@ function RSAEncrypt(text) {
   var c = this.doPublic(m);
   if(c == null) return null;
   var h = c.toString(16);
-  if((h.length & 1) == 0) return h; else return "0" + h;
+  if((h.length & 1) == 0) return {bi: c, s: h}; else return {bi: c, s: "0" + h};
 }
 
 // Return the PKCS#1 RSA encryption of "text" as a Base64-encoded string
