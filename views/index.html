@@ -6,6 +6,8 @@
 
 	var socket;
 	var current_users = {};
+	var minSafeModulus;
+
 	function initWebSockets(){
 		socket = io.connect(location.origin, {'connect timeout': 1000});
 
@@ -32,6 +34,7 @@
 			}
 			// update the current user/pubkey hash
 			current_users = userListToHash(users);
+			calculateMinModulus();
 			updateTargetSelector();
 
 
@@ -91,6 +94,7 @@
 		});
 	});
 
+	var garbagePadding = 5;
 	function encryptMessage(data, target){
 		pubkey = current_users[target];
 		var crypto = new JSEncrypt();
@@ -98,15 +102,35 @@
 		// encrypt returns the message both in BigInteger form (bi) and base16 string form (s)
 
 		// TODO: check whether bi is greater than the lowest public key modulus
-		return crypto.encrypt(data).s;
+
+		var candidate;
+		for (var i  = 0; i < 5; i++){
+			candidate = randomGarbage(garbagePadding) + data;
+			var enc_mess = crypto.encrypt(candidate);
+			// if our garbage padded message is less than the minimum modulus, we're good!
+			if(minSafeModulus.compareTo(enc_mess.bi) > 0){
+				return enc_mess.s;
+			}
+			console.log('we had an unsafe message!');
+		}
+
+		return null;
 	}
 
 	function decryptMessage(data){
 		decrypted_message = crypt.decrypt(data);
 		if(decrypted_message){
-			return decrypted_message;
+			return decrypted_message.substring(garbagePadding);
 		}
 		return data;
+	}
+
+	function randomGarbage(n){
+		garbage = [];
+		for(var i = 0; i<n; i++){
+			garbage.push(randomByte());
+		}
+		return String.fromCharCode.apply(String, garbage);
 	}
 
 	var crypt;
@@ -124,6 +148,18 @@
 		crypt = crypto;
 	}
 
+
+	function calculateMinModulus(){
+		var keys = Object.keys(current_users);	
+		var crypto = new JSEncrypt();
+		crypto.setPublicKey(current_users[keys[0]]);
+		var minMod = crypto.key.n;
+		for(var i = 1; i<keys.length; i++){
+			crypto.setPublicKey(current_users[keys[i]]);
+			minMod = crypto.key.n.min(minMod);
+		}
+		minSafeModulus = minMod;
+	}
 
 
 </script>

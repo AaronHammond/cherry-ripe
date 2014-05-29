@@ -1325,6 +1325,7 @@ function rng_get_bytes(ba) {
 function SecureRandom() {}
 
 SecureRandom.prototype.nextBytes = rng_get_bytes;
+window.randomByte = rng_get_byte;
 // Depends on jsbn.js and rng.js
 
 // Version 1.1: support utf-8 encoding in pkcs1pad2
@@ -4237,9 +4238,11 @@ JSEncrypt.prototype.decrypt = function (string) {
  * @public
  */
 JSEncrypt.prototype.encrypt = function (string) {
+  console.log("encrypting " + string);
   // Return the encrypted string.
   try {
-    return hex2b64(this.getKey().encrypt(string));
+    var result = this.getKey().encrypt(string);
+    return {bi: result.bi, s: hex2b64(result.s)};
   }
   catch (ex) {
     return false;
