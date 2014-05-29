@@ -37,6 +37,7 @@ if ('development' == app.get('env')) {
 }
 
 app.get('/', routes.index);
+app.get('/chat', routes.chat);
 app.get('/users', user.list);
 
 http_app = http.createServer(app).listen(app.get('port'), function(){

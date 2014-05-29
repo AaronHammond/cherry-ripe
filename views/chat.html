@@ -1,0 +1,62 @@
+<html>
+
+	<head>
+		
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<script src="/js/bootstrap.js"></script>
+		<link rel="stylesheet" href="/css/bootstrap.css">
+		<!--<link rel="stylesheet" href="/css/bootstrap-theme.css">-->
+
+		<link rel="stylesheet" type="text/css" href="">
+
+
+		<style type="text/css">
+			.chat-box {
+				border-color: #ddd;
+				border-width: 1px;
+				height: 300px;
+				border-style: solid;
+				border-top-color: transparent;
+				border-bottom-left-radius: 3px;
+				border-bottom-right-radius: 3px;
+			}
+			.chatter {
+				margin-bottom: -10px;
+			}
+			#conversation {
+				min-height: 265px;
+			}
+
+		</style>
+	</head>
+	<body>
+		<div class="container" style="margin-top: 30px">
+			<ul class="nav nav-tabs nav-justified">
+			  <li class="active"><a href="#">Avesta &nbsp;<span class="badge">11</span></a></li>
+			  <li><a href="#">Nirvana &nbsp;<span class="badge">14</span></a></li>
+			  <li><a href="#">Valhalla &nbsp;<span class="badge">9</span></a></li>
+			</ul>
+			<div class="chat-box">
+				<div id="conversation"></div>
+				<div class="chatter input-group">
+				  <div class="input-group-btn">
+				    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">Target <span class="caret"></span></button>
+			        <ul class="dropdown-menu pull-left">
+			          <li><a href="#">Aaron</a></li>
+			          <li><a href="#">John</a></li>
+			          <li><a href="#">Andrew</a></li>
+			          <li class="divider"></li>
+			          <li><a href="#">Broadcast</a></li>
+			        </ul>
+				  </div>
+				  <input type="text" class="form-control">
+				  <div class="input-group-btn">
+				  	<button type="button" class="btn btn-default">Send</button>
+				  </div>
+				</div>
+			</div>
+		</div>
+
+	</body>
+
+</html>
