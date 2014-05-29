@@ -22,7 +22,11 @@
 				margin-bottom: -10px;
 			}
 			#conversation {
-				min-height: 265px;
+				height: 265px;
+				overflow-x: hidden;
+				overflow-y: scroll;
+				word-wrap: break-word;
+				white-space: pre;
 			}
 
 			#settings-logo {
@@ -83,26 +87,23 @@
 					current_users = userListToHash(users);
 					calculateMinModulus();
 					updateTargetSelector();
-
-
-					$('#pkeys').empty();
-					for(key in current_users){
-						$('#pkeys').append(key);
-						$('#pkeys').append('<br>');
-						$('#pkeys').append(current_users[key]);
-						$('#pkeys').append('<br>');
-					}
 				});
 
 				// listener, whenever the server emits 'updaterooms', this updates the room the client is in
 				socket.on('updaterooms', function(rooms) {
+					console.log('updating rooms');
+
 					$('#chat-nav').empty();
 
 					$.each(rooms, function(key, value){
 						var tab = 
 						$('<li id="' + key +'-tab">').append(
 							$('<a>').attr('href', '#')
-							.html(key + ' &nbsp;<span class="badge">' + value + '</span>'));
+							.html(key + ' &nbsp;<span class="badge">' + value + '</span>'))
+						.click(
+							function(){
+								switchRoom(key);
+							});
 						$('#chat-nav').append(tab);
 					});
 					$('#chat-nav').append(
@@ -113,6 +114,8 @@
 						)
 					);
 					$('#' + currentRoom + '-tab').addClass('active');
+
+
 				});
 			}
 			 
@@ -154,9 +157,12 @@
 			}
 			// on load of page
 			$(function(){
+				$('#connect-modal').modal();
+				$('#connect-modal').modal('show');
 				$('#connect').click(function(){
 					generateKeys();
 					initWebSockets();
+					$('#connect-modal').modal('hide');
 				});
 				$('#send-button').click(function(){
 					var data = encryptMessage($('#message').val(), $('#target-selection-trigger').attr('selected-target'));
@@ -216,8 +222,6 @@
 				crypto.getKey();
 				dt = new Date();
 				time += (dt.getTime());
-				$("#privKey").text(crypto.getPrivateKey());
-				$("#pubKey").text(crypto.getPublicKey());
 				crypt = crypto;
 			}
 
@@ -275,12 +279,22 @@
 
 		<br></br>
 
-		<input id="username"></input>
-		<button id="connect">Connect</button>
-		<p id="pkeys"></p>
+		
 
-		<p id="privKey"></p>
-		<p id="pubKey"></p>
-
+		<div id="connect-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+			<div class="modal-dialog modal-sm">
+		    	<div class="modal-content">
+		    		<div class="modal-header">
+				        <h4 class="modal-title" id="mySmallModalLabel">Connect</h4>
+				    </div>
+				    <div class="modal-body">
+				        Username <input id="username"></input>
+				    </div>
+				    <div class="modal-footer">
+				        <button id="connect" type="button" class="btn btn-primary">Connect</button>
+				    </div>
+    			</div>
+  			</div>
+		</div>
 	</body>
 </html>
