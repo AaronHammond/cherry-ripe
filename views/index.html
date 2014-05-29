@@ -63,7 +63,7 @@
 				socket.on('updatechat', function (username, data) {
 					// if someone sends a chat message, append it to the conversation
 					message = decryptMessage(data);
-					$('#conversation').append('<b>'+username + ':</b> ' + message + '<br>');
+					addMessage(username, message);
 				});
 
 				socket.on('updateusers', function(new_username, users, old_username, room){
@@ -77,11 +77,13 @@
 							$('#chat-nav > li').removeClass('active');
 							$('#' + currentRoom + '-tab').addClass('active');
 						}
-						$('#conversation').append('<b>'+new_username + ':</b> has joined the room.<br>');
+						addMessage(new_username, 'has joined the room.')
 					}
 					// if a user is leaving
 					else{
-						$('#conversation').append('<b>'+old_username + ':</b> has left the room.<br>');
+						if(old_username != username){
+							addMessage(old_username, 'has left the room.');
+						}
 					}
 					// update the current user/pubkey hash
 					current_users = userListToHash(users);
@@ -117,6 +119,11 @@
 
 
 				});
+			}
+
+			function addMessage(user, message) {
+				$('#conversation').append('<b>'+ user + ':</b> ' + message + '<br>');
+				$("#conversation").animate({ scrollTop: $('#conversation')[0].scrollHeight}, 250);
 			}
 			 
 			function userListToHash(users){
@@ -165,13 +172,28 @@
 					$('#connect-modal').modal('hide');
 				});
 				$('#send-button').click(function(){
-					var data = encryptMessage($('#message').val(), $('#target-selection-trigger').attr('selected-target'));
-					socket.emit('sendchat', data);
+					sendMessage();
+				});
+
+				$('#message').bind('keypress', function(e) {
+					var code = e.keyCode || e.which;
+ 					if(code == 13) { //Enter keycode
+   						sendMessage();
+ 					}
 				});
 
 				
 
+				
+
 			});
+
+			function sendMessage(){
+				var data = encryptMessage($('#message').val(), $('#target-selection-trigger').attr('selected-target'));
+				socket.emit('sendchat', data);
+				$('#message').val(null);
+			}
+
 
 			var garbagePadding = 5;
 			function encryptMessage(data, target){
