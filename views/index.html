@@ -1,180 +1,286 @@
-<script src="/socket.io/socket.io.js"></script>
-<script src="/js/jsencrypt.js"></script>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-<script>
+<html>
+	<head>
 
-
-	var socket;
-	var current_users = {};
-	var minSafeModulus;
-
-	function initWebSockets(){
-		socket = io.connect(location.origin, {'connect timeout': 1000});
-
-		socket.on('connect', function(){
-			// add the user with the username and the generated public key
-			socket.emit('adduser', $('#username').val(), crypt.getPublicKey());
-		});
-
-		socket.on('updatechat', function (username, data) {
-			// if someone sends a chat message, append it to the conversation
-			message = decryptMessage(data);
-			$('#conversation').append('<b>'+username + ':</b> ' + message + '<br>');
-		});
-
-		socket.on('updateusers', function(new_username, users, old_username){
-			console.log('users being udpated');
-			// if a user is joining
-			if(new_username){
-				$('#conversation').append('<b>'+new_username + ':</b> has joined the room.<br>');	
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="/js/jsencrypt.js"></script>
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<script src="/js/bootstrap.js"></script>
+		<link rel="stylesheet" href="/css/bootstrap.css">
+		<!--<link rel="stylesheet" href="/css/bootstrap-theme.css">-->
+		<link href='http://fonts.googleapis.com/css?family=Lobster' rel='stylesheet' type='text/css'>
+		<style type="text/css">
+			#chat-box {
+				border-color: #ddd;
+				border-width: 1px;
+				height: 300px;
+				border-style: solid;
+				border-top-color: transparent;
+				border-bottom-left-radius: 3px;
+				border-bottom-right-radius: 3px;
 			}
-			// if a user is leaving
-			else{
-				$('#conversation').append('<b>'+old_username + ':</b> has left the room.<br>');
+			#chatter {
+				margin-bottom: -10px;
 			}
-			// update the current user/pubkey hash
-			current_users = userListToHash(users);
-			calculateMinModulus();
-			updateTargetSelector();
-
-
-			$('#pkeys').empty();
-			for(key in current_users){
-				$('#pkeys').append(key);
-				$('#pkeys').append('<br>');
-				$('#pkeys').append(current_users[key]);
-				$('#pkeys').append('<br>');
+			#conversation {
+				min-height: 265px;
 			}
-		});
 
-		// listener, whenever the server emits 'updaterooms', this updates the room the client is in
-		socket.on('updaterooms', function(rooms, current_room) {
-			$('#rooms').empty();
-			$.each(rooms, function(key, value) {
-				if(value == current_room){
-					$('#rooms').append('<div>' + value + '</div>');
+			#settings-logo {
+				top: 3px;
+			}
+
+			#title {
+				font-family: 'Lobster', cursive;
+				color: red;
+			}
+
+			#chat-nav {
+				margin-top: 25px;
+			}
+		</style>
+		<script>
+
+
+			var socket;
+			var current_users = {};
+			var minSafeModulus;
+			var selectedTarget;
+			var username;
+			var currentRoom;
+			function initWebSockets(){
+				socket = io.connect(location.origin, {'connect timeout': 1000});
+
+				socket.on('connect', function(){
+					// add the user with the username and the generated public key
+					username = $('#username').val();
+					socket.emit('adduser', username, crypt.getPublicKey());
+				});
+
+				socket.on('updatechat', function (username, data) {
+					// if someone sends a chat message, append it to the conversation
+					message = decryptMessage(data);
+					$('#conversation').append('<b>'+username + ':</b> ' + message + '<br>');
+				});
+
+				socket.on('updateusers', function(new_username, users, old_username, room){
+					console.log('users being udpated');
+					// if a user is joining
+					if(new_username){
+						if(new_username == username){
+							currentRoom = room;
+							$('#conversation').empty();
+							// switch the active tab
+							$('#chat-nav > li').removeClass('active');
+							$('#' + currentRoom + '-tab').addClass('active');
+						}
+						$('#conversation').append('<b>'+new_username + ':</b> has joined the room.<br>');
+					}
+					// if a user is leaving
+					else{
+						$('#conversation').append('<b>'+old_username + ':</b> has left the room.<br>');
+					}
+					// update the current user/pubkey hash
+					current_users = userListToHash(users);
+					calculateMinModulus();
+					updateTargetSelector();
+
+
+					$('#pkeys').empty();
+					for(key in current_users){
+						$('#pkeys').append(key);
+						$('#pkeys').append('<br>');
+						$('#pkeys').append(current_users[key]);
+						$('#pkeys').append('<br>');
+					}
+				});
+
+				// listener, whenever the server emits 'updaterooms', this updates the room the client is in
+				socket.on('updaterooms', function(rooms) {
+					$('#chat-nav').empty();
+
+					$.each(rooms, function(key, value){
+						var tab = 
+						$('<li id="' + key +'-tab">').append(
+							$('<a>').attr('href', '#')
+							.html(key + ' &nbsp;<span class="badge">' + value + '</span>'));
+						$('#chat-nav').append(tab);
+					});
+					$('#chat-nav').append(
+						$('<li>').append(
+							$('<a>').attr('href', '#')
+									.html('Settings &nbsp;<span id="settings-logo" class="glyphicon glyphicon-wrench"></span>'
+							)
+						)
+					);
+					$('#' + currentRoom + '-tab').addClass('active');
+				});
+			}
+			 
+			function userListToHash(users){
+				res = {};
+				var i;
+				for(i in users){
+					splIndex = users[i].indexOf("-----BEGIN PUBLIC KEY-----");
+					res[users[i].substring(0, splIndex)] = users[i].substring(splIndex);
 				}
-				else {
-					$('#rooms').append('<div><a href="#" onclick="switchRoom(\''+value+'\')">' + value + '</a></div>');
+				return res;
+			}
+
+			function switchRoom(room){
+				socket.emit('switchroom', room);
+			}
+
+			function updateTargetSelector(){
+				var key;
+				$('#target-selection-dropdown').empty();
+				for(key in current_users){
+					$('#target-selection-dropdown').append(
+						$('<li>')
+						.append(
+							$('<a>').addClass("target-selection").attr("href", "#").text(key)
+						));
 				}
+				$('#target-selection-dropdown').append(
+					$('<li>').addClass('divider')
+				);
+				$('#target-selection-dropdown').append(
+					$('<li>')
+					.append($('<a>').attr('href', '#').text('Broadcast')));
+				$('.target-selection').click(function(){
+					var newTarget = $(this).text();
+					$('#target-selection-trigger').attr('selected-target', newTarget);
+					$('#target-selection-trigger').html(newTarget + ' <span class="caret"></span>')
+				});
+			}
+			// on load of page
+			$(function(){
+				$('#connect').click(function(){
+					generateKeys();
+					initWebSockets();
+				});
+				$('#send-button').click(function(){
+					var data = encryptMessage($('#message').val(), $('#target-selection-trigger').attr('selected-target'));
+					socket.emit('sendchat', data);
+				});
+
+				
+
 			});
-		});
-	}
-	 
-	function userListToHash(users){
-		res = {};
-		var i;
-		for(i in users){
-			splIndex = users[i].indexOf("-----BEGIN PUBLIC KEY-----");
-			res[users[i].substring(0, splIndex)] = users[i].substring(splIndex);
-		}
-		return res;
-	}
 
-	function switchRoom(room){
-		socket.emit('switchroom', room);
-	}
+			var garbagePadding = 5;
+			function encryptMessage(data, target){
+				pubkey = current_users[target];
+				var crypto = new JSEncrypt();
+				crypto.setPublicKey(pubkey);
+				// encrypt returns the message both in BigInteger form (bi) and base16 string form (s)
 
-	function updateTargetSelector(){
-		var key;
-		$('#targets').empty();
-		for(key in current_users){
-			$('#targets').append($('<option>').attr('value', key).text(key));
-		}
-	}
-	// on load of page
-	$(function(){
-		$('#connect').click(function(){
-			generateKeys();
-			initWebSockets();
-		});
-		$('#send').click(function(){
-			var data = encryptMessage($('#text').val(), $('#targets').val());
-			socket.emit('sendchat', data);
-		});
-	});
+				// TODO: check whether bi is greater than the lowest public key modulus
 
-	var garbagePadding = 5;
-	function encryptMessage(data, target){
-		pubkey = current_users[target];
-		var crypto = new JSEncrypt();
-		crypto.setPublicKey(pubkey);
-		// encrypt returns the message both in BigInteger form (bi) and base16 string form (s)
+				var candidate;
+				for (var i  = 0; i < 5; i++){
+					candidate = randomGarbage(garbagePadding) + data;
+					var enc_mess = crypto.encrypt(candidate);
+					// if our garbage padded message is less than the minimum modulus, we're good!
+					if(minSafeModulus.compareTo(enc_mess.bi) > 0){
+						return enc_mess.s;
+					}
+					console.log('we had an unsafe message!');
+				}
 
-		// TODO: check whether bi is greater than the lowest public key modulus
-
-		var candidate;
-		for (var i  = 0; i < 5; i++){
-			candidate = randomGarbage(garbagePadding) + data;
-			var enc_mess = crypto.encrypt(candidate);
-			// if our garbage padded message is less than the minimum modulus, we're good!
-			if(minSafeModulus.compareTo(enc_mess.bi) > 0){
-				return enc_mess.s;
+				return null;
 			}
-			console.log('we had an unsafe message!');
-		}
 
-		return null;
-	}
+			function decryptMessage(data){
+				decrypted_message = crypt.decrypt(data);
+				if(decrypted_message){
+					return decrypted_message.substring(garbagePadding);
+				}
+				return data;
+			}
 
-	function decryptMessage(data){
-		decrypted_message = crypt.decrypt(data);
-		if(decrypted_message){
-			return decrypted_message.substring(garbagePadding);
-		}
-		return data;
-	}
+			function randomGarbage(n){
+				garbage = [];
+				for(var i = 0; i<n; i++){
+					garbage.push(randomByte());
+				}
+				return String.fromCharCode.apply(String, garbage);
+			}
 
-	function randomGarbage(n){
-		garbage = [];
-		for(var i = 0; i<n; i++){
-			garbage.push(randomByte());
-		}
-		return String.fromCharCode.apply(String, garbage);
-	}
-
-	var crypt;
-	function generateKeys(){
-		// a keysize of 4096 will allow messages of up to 936 bits, or 117 characters
-		var keySize = 1024;
-		var crypto = new JSEncrypt({default_key_size: keySize});
-		var dt = new Date();
-		var time = -(dt.getTime());
-		crypto.getKey();
-		dt = new Date();
-		time += (dt.getTime());
-		$("#privKey").text(crypto.getPrivateKey());
-		$("#pubKey").text(crypto.getPublicKey());
-		crypt = crypto;
-	}
+			var crypt;
+			function generateKeys(){
+				// a keysize of 4096 will allow messages of up to 936 bits, or 117 characters
+				var keySize = 1024;
+				var crypto = new JSEncrypt({default_key_size: keySize});
+				var dt = new Date();
+				var time = -(dt.getTime());
+				crypto.getKey();
+				dt = new Date();
+				time += (dt.getTime());
+				$("#privKey").text(crypto.getPrivateKey());
+				$("#pubKey").text(crypto.getPublicKey());
+				crypt = crypto;
+			}
 
 
-	function calculateMinModulus(){
-		var keys = Object.keys(current_users);	
-		var crypto = new JSEncrypt();
-		crypto.setPublicKey(current_users[keys[0]]);
-		var minMod = crypto.key.n;
-		for(var i = 1; i<keys.length; i++){
-			crypto.setPublicKey(current_users[keys[i]]);
-			minMod = crypto.key.n.min(minMod);
-		}
-		minSafeModulus = minMod;
-	}
+			function calculateMinModulus(){
+				var keys = Object.keys(current_users);	
+				var crypto = new JSEncrypt();
+				crypto.setPublicKey(current_users[keys[0]]);
+				var minMod = crypto.key.n;
+				for(var i = 1; i<keys.length; i++){
+					crypto.setPublicKey(current_users[keys[i]]);
+					minMod = crypto.key.n.min(minMod);
+				}
+				minSafeModulus = minMod;
+			}
 
 
-</script>
-<p>Welcome to Cherry-Ripe</p>
-<p id="rooms"></p>
-<p id="conversation"></p>
-<input id="text"></input>
-<select id="targets"></select>
-<button id="send">Send</button>
+		</script>
 
-<br></br>
+	</head>
 
-<input id="username"></input>
-<button id="connect">Connect</button>
-<p id="pkeys"></p>
+	<body>
 
-<p id="privKey"></p>
-<p id="pubKey"></p>
+
+		<div class="container">
+			<div class="page-header">
+				<h1 id="title">Cherry Ripe</h1>
+			</div>
+			<ul id="chat-nav" class="nav nav-tabs nav-justified">
+			  <li id="Avesta-tab" class="active"><a href="#">Avesta &nbsp;<span class="badge">11</span></a></li>
+			  <li id="Nirvana-tab"><a href="#">Nirvana &nbsp;<span class="badge">14</span></a></li>
+			  <li id="Valhalla-tab"><a href="#">Valhalla &nbsp;<span class="badge">9</span></a></li>
+			  <li id="settings-tab"><a href="#">Settings &nbsp;<span id="settings-logo" class="glyphicon glyphicon-wrench"></span></a></li>
+			</ul>
+			<div id="chat-box">
+				<div id="conversation"></div>
+				<div id="chatter" class="input-group">
+				  <div class="input-group-btn">
+				    <button id="target-selection-trigger" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">Target <span class="caret"></span></button>
+			        <ul id="target-selection-dropdown" class="dropdown-menu pull-left">
+			          <li><a class="target-selection" href="#">Aaron</a></li>
+			          <li><a class="target-selection" href="#">John</a></li>
+			          <li><a class="target-selection" href="#">Andrew</a></li>
+			          <li class="divider"></li>
+			          <li><a href="#">Broadcast</a></li>
+			        </ul>
+				  </div>
+				  <input id="message" type="text" class="form-control">
+				  <div class="input-group-btn">
+				  	<button id="send-button" type="button" class="btn btn-default">Send</button>
+				  </div>
+				</div>
+			</div>
+		</div>
+
+		<br></br>
+
+		<input id="username"></input>
+		<button id="connect">Connect</button>
+		<p id="pkeys"></p>
+
+		<p id="privKey"></p>
+		<p id="pubKey"></p>
+
+	</body>
+</html>

@@ -6,12 +6,13 @@
 		<script src="/js/bootstrap.js"></script>
 		<link rel="stylesheet" href="/css/bootstrap.css">
 		<!--<link rel="stylesheet" href="/css/bootstrap-theme.css">-->
+		<link href='http://fonts.googleapis.com/css?family=Lobster' rel='stylesheet' type='text/css'>
 
 		<link rel="stylesheet" type="text/css" href="">
 
 
 		<style type="text/css">
-			.chat-box {
+			#chat-box {
 				border-color: #ddd;
 				border-width: 1px;
 				height: 300px;
@@ -20,25 +21,42 @@
 				border-bottom-left-radius: 3px;
 				border-bottom-right-radius: 3px;
 			}
-			.chatter {
+			#chatter {
 				margin-bottom: -10px;
 			}
 			#conversation {
 				min-height: 265px;
 			}
 
+			#settings-logo {
+				top: 3px;
+			}
+
+			#title {
+				font-family: 'Lobster', cursive;
+				color: red;
+			}
+
+			#chat-nav {
+				margin-top: 25px;
+			}
 		</style>
 	</head>
 	<body>
-		<div class="container" style="margin-top: 30px">
-			<ul class="nav nav-tabs nav-justified">
+
+		<div class="container">
+			<div class="page-header">
+				<h1 id="title">Cherry Ripe</h1>
+			</div>
+			<ul id="chat-nav" class="nav nav-tabs nav-justified">
 			  <li class="active"><a href="#">Avesta &nbsp;<span class="badge">11</span></a></li>
 			  <li><a href="#">Nirvana &nbsp;<span class="badge">14</span></a></li>
 			  <li><a href="#">Valhalla &nbsp;<span class="badge">9</span></a></li>
+			  <li><a href="#">Settings &nbsp;<span id="settings-logo" class="glyphicon glyphicon-wrench"></span></a></li>
 			</ul>
-			<div class="chat-box">
+			<div id="chat-box">
 				<div id="conversation"></div>
-				<div class="chatter input-group">
+				<div id="chatter" class="input-group">
 				  <div class="input-group-btn">
 				    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">Target <span class="caret"></span></button>
 			        <ul class="dropdown-menu pull-left">

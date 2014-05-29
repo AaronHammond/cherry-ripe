@@ -47,7 +47,9 @@ http_app = http.createServer(app).listen(app.get('port'), function(){
 var io = require('socket.io').listen(http_app);
 
 // rooms which are currently available in chat
-var rooms = ['Avesta', 'Nirvana', 'Valhalla'];
+redisClient.lpush('rooms', 'Valhalla', 'Nirvana', 'Avesta');
+
+
 
 
 function updateUserRoom(socket, room){
@@ -68,8 +70,32 @@ function updateUserRoom(socket, room){
 	socket.join(room);
 	// tell the new room that the user is joining, and send the updated list to all folks in the room
 	emitRoomUsersEntering(socket);
-	// update the room list for the user
-	socket.emit('updaterooms', rooms, room);
+	// update the room list for all users
+	updateRooms();
+}
+
+function updateRooms(){
+	var multi = redisClient.multi();
+	// grab all rooms
+	redisClient.lrange('rooms', '0', '-1', function(err, rooms){
+		// for every room, grab the number of users in the room
+		for(var room in rooms){
+			console.log('reading cardinality of ' + rooms[room] + ':users');
+			multi.scard(rooms[room]+':users');
+		}
+		// execute the cardinality grabs
+		multi.exec(function(err, replies){
+			console.log(replies);
+			var response = {};
+			// for every room, populate a hash with the key being the room and the value being the
+			// cardinality of the room
+			for(var i = 0; i<rooms.length; i++){
+				response[rooms[i]] = replies[i];
+			}
+			// push out the hash to the sockets
+			io.sockets.emit('updaterooms', response);
+		});
+	});
 }
 
 
@@ -78,7 +104,7 @@ function emitRoomUsersEntering(socket){
 		if(!users){
 			users = []
 		}
-		io.sockets.in(socket.room).emit('updateusers', socket.username, users);
+		io.sockets.in(socket.room).emit('updateusers', socket.username, users, null, socket.room);
 	});
 }
 
@@ -87,7 +113,7 @@ function emitRoomUsersLeaving(socket){
 		if(!users){
 			users = []
 		}
-		io.sockets.in(socket.room).emit('updateusers', null, users, socket.username);
+		io.sockets.in(socket.room).emit('updateusers', null, users, socket.username, socket.room);
 	});
 }
 
@@ -102,7 +128,9 @@ io.sockets.on('connection', function (socket) {
 		socket.username = username;
 		socket.pubkey = pubkey;
 		// set the user room
-		updateUserRoom(socket, 'Avesta');
+		redisClient.lindex('rooms', 0, function(err, room) {
+			updateUserRoom(socket, room);
+		});
 	});
 
 	// when the client emits 'sendchat', this listens and executes

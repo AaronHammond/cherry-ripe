@@ -10,6 +10,7 @@
     "jade": "*",
     "ejs": "*",
     "socket.io": "*",
-    "redis": "*"
+    "redis": "*",
+    "async": "*"
   }
 }
