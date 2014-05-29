@@ -152,5 +152,6 @@ io.sockets.on('connection', function (socket) {
 		socket.leave(socket.room);
 		// let the old room know that the user left, and give them the updated list of users
 		emitRoomUsersLeaving(socket);
+		updateRooms();
 	});
 });
