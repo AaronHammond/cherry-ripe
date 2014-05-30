@@ -37,9 +37,40 @@
 				font-family: 'Lobster', cursive;
 				color: red;
 			}
+			#title:hover{
+				cursor: default;
+			}
 
 			#chat-nav {
 				margin-top: 25px;
+			}
+			#settings {
+				height: 300px;
+				display: none;
+			}
+			#faq {
+				font-size: 18px;
+				margin-top: 20px;
+			}
+			#faq:hover{
+				text-decoration: none;
+			}
+
+			.unselectable {
+				-webkit-touch-callout: none;
+				-webkit-user-select: none;
+				-khtml-user-select: none;
+				-moz-user-select: none;
+				-ms-user-select: none;
+				user-select: none;
+			}
+
+			#footer {
+				position: absolute;
+				bottom: 0;
+				width: 100%;
+				height: 45px;
+				text-align: center;
 			}
 		</style>
 		<script>
@@ -51,6 +82,7 @@
 			var selectedTarget;
 			var username;
 			var currentRoom;
+			var displayingSettings = false;
 			function initWebSockets(){
 				socket = io.connect(location.origin, {'connect timeout': 1000});
 
@@ -58,6 +90,7 @@
 					// add the user with the username and the generated public key
 					username = $('#username').val();
 					socket.emit('adduser', username, crypt.getPublicKey());
+					$('#connect-modal').modal('hide');
 				});
 
 				socket.on('updatechat', function (username, data) {
@@ -109,11 +142,13 @@
 						$('#chat-nav').append(tab);
 					});
 					$('#chat-nav').append(
-						$('<li>').append(
+						$('<li id="settings-tab">').append(
 							$('<a>').attr('href', '#')
 									.html('Settings &nbsp;<span id="settings-logo" class="glyphicon glyphicon-wrench"></span>'
 							)
-						)
+						).click(function(){
+							displaySettings();
+						})
 					);
 					$('#' + currentRoom + '-tab').addClass('active');
 
@@ -137,7 +172,31 @@
 			}
 
 			function switchRoom(room){
+				// this will happen when we switch from the settings tab and back
+				if(displayingSettings){
+					$('#conversation').show();
+					$('#chatter').show();
+					$('#settings').hide();
+					displayingSettings = false;
+				}
+
+				if(room == currentRoom){
+					// switch the active tab
+					$('#chat-nav > li').removeClass('active');
+					$('#' + room + '-tab').addClass('active');
+					return;
+				}
+
 				socket.emit('switchroom', room);
+			}
+
+			function displaySettings(){
+				$('#conversation').hide();
+				$('#chatter').hide();
+				$('#settings').show();
+				$('#chat-nav > li').removeClass('active');
+				$('#settings-tab').addClass('active');
+				displayingSettings = true;
 			}
 
 			function updateTargetSelector(){
@@ -164,12 +223,11 @@
 			}
 			// on load of page
 			$(function(){
-				$('#connect-modal').modal();
+				$('#connect-modal').modal({backdrop: 'static', keyboard: false});
 				$('#connect-modal').modal('show');
 				$('#connect').click(function(){
 					generateKeys();
 					initWebSockets();
-					$('#connect-modal').modal('hide');
 				});
 				$('#send-button').click(function(){
 					sendMessage();
@@ -181,32 +239,29 @@
    						sendMessage();
  					}
 				});
-
-				
-
-				
-
 			});
 
 			function sendMessage(){
 				var data = encryptMessage($('#message').val(), $('#target-selection-trigger').attr('selected-target'));
+				if(!data){
+					alert('try a different message!');
+					return;
+				}
 				socket.emit('sendchat', data);
 				$('#message').val(null);
 			}
 
 
-			var garbagePadding = 5;
+
+			var GARBAGE_PADDING = 5;
 			function encryptMessage(data, target){
 				pubkey = current_users[target];
 				var crypto = new JSEncrypt();
 				crypto.setPublicKey(pubkey);
-				// encrypt returns the message both in BigInteger form (bi) and base16 string form (s)
-
-				// TODO: check whether bi is greater than the lowest public key modulus
 
 				var candidate;
-				for (var i  = 0; i < 5; i++){
-					candidate = randomGarbage(garbagePadding) + data;
+				for (var i  = 0; i < 100; i++){
+					candidate = randomGarbage(GARBAGE_PADDING) + data;
 					var enc_mess = crypto.encrypt(candidate);
 					// if our garbage padded message is less than the minimum modulus, we're good!
 					if(minSafeModulus.compareTo(enc_mess.bi) > 0){
@@ -218,14 +273,35 @@
 				return null;
 			}
 
+			/* decryptMessage
+			 *
+			 * attempts to decrypt the message using our priv key, and if successful
+			 * trims off the garbage character. otherwise, return the original message
+			 *
+			 * Required: 
+			 *   [0] data: the message to decrypt
+			 * 
+			 * Returns: either the decrypted message or the original
+			 */
 			function decryptMessage(data){
 				decrypted_message = crypt.decrypt(data);
 				if(decrypted_message){
-					return decrypted_message.substring(garbagePadding);
+					return decrypted_message.substring(GARBAGE_PADDING);
 				}
 				return data;
 			}
 
+
+			/* randomGarbage
+			 *
+			 * Generates a string of random characters. Uses the SecureRandom rng mechanism
+			 * provided by jsencrypt
+			 *
+			 * Required: 
+			 *   [0] n: the number of random bytes to include in the string
+			 * 
+			 * Returns: A string of n random ASCII characters
+			 */
 			function randomGarbage(n){
 				garbage = [];
 				for(var i = 0; i<n; i++){
@@ -234,20 +310,28 @@
 				return String.fromCharCode.apply(String, garbage);
 			}
 
+			/* generateKeys
+			 * 
+			 * loads a public/private key pair into the global crypt.
+			 */
 			var crypt;
 			function generateKeys(){
-				// a keysize of 4096 will allow messages of up to 936 bits, or 117 characters
+				// a keysize of 1024 will allow messages of up to 936 bits, or 117 characters
+				// minus the five that we use to pad random garbage
 				var keySize = 1024;
 				var crypto = new JSEncrypt({default_key_size: keySize});
-				var dt = new Date();
-				var time = -(dt.getTime());
 				crypto.getKey();
-				dt = new Date();
-				time += (dt.getTime());
 				crypt = crypto;
 			}
 
 
+			/* calculateMinModulus
+			 * 
+			 * iterates over all public keys available in the pool and calculates the minimum
+			 * modulus among them, then sets that value to the global minSafeModulus
+			 * this is to remove the possibility of inferring a public key used because the message
+			 * exceeds the modulus of all other public keys
+			 */
 			function calculateMinModulus(){
 				var keys = Object.keys(current_users);	
 				var crypto = new JSEncrypt();
@@ -270,7 +354,8 @@
 
 		<div class="container">
 			<div class="page-header">
-				<h1 id="title">Cherry Ripe</h1>
+				<h1 id="title" class="unselectable">Cherry Ripe</a> <a id="faq" href="#" class="pull-right">What is this?</a></h1>
+
 			</div>
 			<ul id="chat-nav" class="nav nav-tabs nav-justified">
 			  <li id="Avesta-tab" class="active"><a href="#">Avesta &nbsp;<span class="badge">11</span></a></li>
@@ -280,6 +365,36 @@
 			</ul>
 			<div id="chat-box">
 				<div id="conversation"></div>
+				<div class="container" id="settings">
+					<div class="checkbox">
+						<label>
+					  		<input type="checkbox" value="">
+					    	Erase messages when switching rooms
+						</label>
+					</div>
+
+					<div class="checkbox">
+						<label>
+					  		<input type="checkbox" value="">
+					    	Hide encrypted messages in the chatbox
+						</label>
+					</div>
+
+					<div class="checkbox">
+						<label>
+					  		<input type="checkbox" value="">
+					    	Show my messages unencrypted in the chatbox
+						</label>
+					</div>
+
+					<div class="checkbox">
+						<label>
+					  		<input type="checkbox" value="">
+					    	Play a notification sound when receiving a new decrypted message
+						</label>
+					</div>
+
+				</div>
 				<div id="chatter" class="input-group">
 				  <div class="input-group-btn">
 				    <button id="target-selection-trigger" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">Target <span class="caret"></span></button>
@@ -297,9 +412,16 @@
 				  </div>
 				</div>
 			</div>
+
+
+			
 		</div>
 
-		<br></br>
+		<div id="footer">
+				<div class="container">
+					<p>Onion Link: <a>http://derpderpderperperperpeprperer.onion</a></p>
+				</div>
+			</div>
 
 		
 
