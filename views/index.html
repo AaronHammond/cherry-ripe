@@ -8,6 +8,8 @@
 		<link rel="stylesheet" href="/css/bootstrap.css">
 		<!--<link rel="stylesheet" href="/css/bootstrap-theme.css">-->
 		<link href='http://fonts.googleapis.com/css?family=Lobster' rel='stylesheet' type='text/css'>
+		<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+		<link rel="icon" href="/favicon.ico" type="image/x-icon">
 		<style type="text/css">
 			#chat-box {
 				border-color: #ddd;
@@ -17,6 +19,10 @@
 				border-top-color: transparent;
 				border-bottom-left-radius: 3px;
 				border-bottom-right-radius: 3px;
+				display: none;
+			}
+			#chat-nav {
+				display: none;
 			}
 			#chatter {
 				margin-bottom: -10px;
@@ -72,6 +78,15 @@
 				height: 45px;
 				text-align: center;
 			}
+			#connect-pane {
+				margin-left: auto;
+				margin-right: auto;
+				width: 50%;
+				border-color: #ddd;
+				border-style: solid;
+				border-width: 1px;
+				border-radius: 3px;
+			}
 		</style>
 		<script>
 
@@ -87,10 +102,12 @@
 				socket = io.connect(location.origin, {'connect timeout': 1000});
 
 				socket.on('connect', function(){
+					$('#connect-pane').hide();
+					$('#chat-nav').show();
+					$('#chat-box').show();
 					// add the user with the username and the generated public key
-					username = $('#username').val();
+					username = $('#connect-nickname').val();
 					socket.emit('adduser', username, crypt.getPublicKey());
-					$('#connect-modal').modal('hide');
 				});
 
 				socket.on('updatechat', function (username, data) {
@@ -223,8 +240,6 @@
 			}
 			// on load of page
 			$(function(){
-				$('#connect-modal').modal({backdrop: 'static', keyboard: false});
-				$('#connect-modal').modal('show');
 				$('#connect').click(function(){
 					generateKeys();
 					initWebSockets();
@@ -357,6 +372,30 @@
 				<h1 id="title" class="unselectable">Cherry Ripe</a> <a id="faq" href="#" class="pull-right">What is this?</a></h1>
 
 			</div>
+
+			<div class="container" id="connect-pane">
+				<form role="form">
+					<br>
+					<div class="form-group">
+				    	<label for="connect-username">Username</label>
+				    	<input type="text" class="form-control" id="connect-username" placeholder="Enter username">
+					</div>
+					<div class="form-group">
+					    <label for="connect-password">Password</label>
+					    <input type="password" class="form-control" id="connect-password" placeholder="Enter password">
+					</div>
+					<p class="help-block">Or connect anonymously</p>
+					<div class="form-group">
+					    <label for="connect-nickname">Nickname</label>
+					    <input type="text" class="form-control" id="connect-nickname" placeholder="Pick a nickname">
+					</div>
+  					<div id="connect" class="btn btn-default">Connect</div>
+				</form>
+			</div>
+
+
+			<!-- CHAT STUFF -->
+
 			<ul id="chat-nav" class="nav nav-tabs nav-justified">
 			  <li id="Avesta-tab" class="active"><a href="#">Avesta &nbsp;<span class="badge">11</span></a></li>
 			  <li id="Nirvana-tab"><a href="#">Nirvana &nbsp;<span class="badge">14</span></a></li>
@@ -365,6 +404,8 @@
 			</ul>
 			<div id="chat-box">
 				<div id="conversation"></div>
+
+				<!-- SETTINGS -->
 				<div class="container" id="settings">
 					<div class="checkbox">
 						<label>
@@ -393,8 +434,10 @@
 					    	Play a notification sound when receiving a new decrypted message
 						</label>
 					</div>
-
 				</div>
+				<!-- END SETTINGS -->
+
+
 				<div id="chatter" class="input-group">
 				  <div class="input-group-btn">
 				    <button id="target-selection-trigger" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">Target <span class="caret"></span></button>
@@ -412,33 +455,12 @@
 				  </div>
 				</div>
 			</div>
-
-
-			
 		</div>
 
 		<div id="footer">
-				<div class="container">
-					<p>Onion Link: <a>http://derpderpderperperperpeprperer.onion</a></p>
-				</div>
+			<div class="container">
+				<p>Onion Link: <a>http://derpderpderperperperpeprperer.onion</a></p>
 			</div>
-
-		
-
-		<div id="connect-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
-			<div class="modal-dialog modal-sm">
-		    	<div class="modal-content">
-		    		<div class="modal-header">
-				        <h4 class="modal-title" id="mySmallModalLabel">Connect</h4>
-				    </div>
-				    <div class="modal-body">
-				        Username <input id="username"></input>
-				    </div>
-				    <div class="modal-footer">
-				        <button id="connect" type="button" class="btn btn-primary">Connect</button>
-				    </div>
-    			</div>
-  			</div>
 		</div>
 	</body>
 </html>
