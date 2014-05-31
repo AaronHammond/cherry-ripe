@@ -139,6 +139,10 @@ function checkUsername(nickname, next){
 }
 
 io.sockets.on('connection', function (socket) {
+	console.log('SOMEONE IS HANDSHAKING..........');
+	console.log(socket.handshake.query);
+	console.log(socket.handshake.query.username);
+	console.log(socket.handshake.query.pubkey);
 	socket.username = socket.handshake.query.username;
 	socket.pubkey = socket.handshake.query.pubkey;
 	redisClient.sadd('users', socket.username);

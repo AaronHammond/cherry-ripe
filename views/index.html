@@ -101,6 +101,7 @@
 			function initWebSockets(){
 				username = $('#connect-nickname').val();
 				var pubkey = crypt.getPublicKey();
+				console.log(pubkey);
 				var qstring = "username=" + username + "&pubkey=" + pubkey;
 				socket = io.connect(location.origin, {'connect timeout': 1000, query: qstring, multiplex: false});
 
