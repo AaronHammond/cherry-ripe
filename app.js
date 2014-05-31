@@ -121,16 +121,27 @@ function socketToRedisValue(socket){
 }
 
 
-io.sockets.on('connection', function (socket) {
+io.use(function(socket, next){
+	var des_nickname = socket.handshake.query.username;
+	checkUsername(des_nickname, next);
+})
 
-	socket.on('adduser', function(username, pubkey){
-		socket.username = username;
-		socket.pubkey = pubkey;
-		// set the user room
-		redisClient.lindex('rooms', 0, function(err, room) {
-			updateUserRoom(socket, room);
-		});
-	});
+
+function checkUsername(nickname, next){
+	redisClient.sismember('users', nickname, function(err, resp){
+		if(resp == 1){
+			next(new Error('nickname in use'));
+		}
+		else{
+			next();
+		}
+	})
+}
+
+io.sockets.on('connection', function (socket) {
+	socket.username = socket.handshake.query.username;
+	socket.pubkey = socket.handshake.query.pubkey;
+	redisClient.sadd('users', socket.username);
 
 	// when the client emits 'sendchat', this listens and executes
 	socket.on('sendchat', function (data) {
@@ -147,6 +158,7 @@ io.sockets.on('connection', function (socket) {
 	socket.on('disconnect', function(){
 		// remove the user from the redis set for that room
 		redisClient.srem(socket.room+":users", socketToRedisValue(socket));
+		redisClient.srem('users', socket.username);
 		// leave the room
 		socket.leave(socket.room);
 		// let the old room know that the user left, and give them the updated list of users

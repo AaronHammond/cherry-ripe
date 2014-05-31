@@ -99,16 +99,30 @@
 			var currentRoom;
 			var displayingSettings = false;
 			function initWebSockets(){
-				socket = io.connect(location.origin, {'connect timeout': 1000});
+				username = $('#connect-nickname').val();
+				var pubkey = crypt.getPublicKey();
+				var qstring = "username=" + username + "&pubkey=" + pubkey;
+				socket = io.connect(location.origin, {'connect timeout': 1000, query: qstring, multiplex: false});
 
+				console.log(socket);
 				socket.on('connect', function(){
 					$('#connect-pane').hide();
 					$('#chat-nav').show();
 					$('#chat-box').show();
-					// add the user with the username and the generated public key
-					username = $('#connect-nickname').val();
-					socket.emit('adduser', username, crypt.getPublicKey());
+					socket.emit('switchroom', 'Avesta');
 				});
+
+				socket.on('error', function(error) {
+					if(error === "nickname in use"){
+						console.log('bad username!');
+					}
+
+					
+				});
+
+				socket.on('connect_error', function(data){
+					console.log('herp');
+				})
 
 				socket.on('updatechat', function (username, data) {
 					// if someone sends a chat message, append it to the conversation
@@ -133,6 +147,7 @@
 					else{
 						if(old_username != username){
 							addMessage(old_username, 'has left the room.');
+							clearTargetSelector(old_username);
 						}
 					}
 					// update the current user/pubkey hash
@@ -237,6 +252,12 @@
 					$('#target-selection-trigger').attr('selected-target', newTarget);
 					$('#target-selection-trigger').html(newTarget + ' <span class="caret"></span>')
 				});
+			}
+
+			function clearTargetSelector(username){
+				if($('#target-selection-trigger').text().trim() === username){
+					$('#target-selection-trigger').html('Target <span class="caret"></span>');
+				}
 			}
 			// on load of page
 			$(function(){
