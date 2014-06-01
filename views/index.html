@@ -87,6 +87,15 @@
 				border-width: 1px;
 				border-radius: 3px;
 			}
+
+			#nameInUseAlert {
+				display: none;
+			}
+
+			#throbber {
+				margin-left: 3px;
+				display: none;
+			}
 		</style>
 		<script>
 
@@ -108,6 +117,7 @@
 				console.log(socket);
 				socket.on('connect', function(){
 					$('#connect-pane').hide();
+					$('#throbber').hide();
 					$('#chat-nav').show();
 					$('#chat-box').show();
 					socket.emit('switchroom', 'Avesta');
@@ -116,6 +126,8 @@
 				socket.on('error', function(error) {
 					if(error === "nickname in use"){
 						console.log('bad username!');
+						$('#nameInUseAlert').show();
+						$('#throbber').hide();
 					}
 
 					
@@ -263,6 +275,8 @@
 			// on load of page
 			$(function(){
 				$('#connect').click(function(){
+					$('#nameInUseAlert').hide();
+					$('#throbber').show();
 					generateKeys();
 					initWebSockets();
 				});
@@ -407,11 +421,14 @@
 					    <input type="password" class="form-control" id="connect-password" placeholder="Enter password">
 					</div>
 					<p class="help-block">Or connect anonymously</p>
+
 					<div class="form-group">
 					    <label for="connect-nickname">Nickname</label>
 					    <input type="text" class="form-control" id="connect-nickname" placeholder="Pick a nickname">
 					</div>
+					<div id="nameInUseAlert" class="alert alert-danger"><b>Woops! That nickname is in use.</b> Try another and reconnect.</div>
   					<div id="connect" class="btn btn-default">Connect</div>
+  					<img id="throbber" src="/images/throbber.gif">
 				</form>
 			</div>
 
@@ -419,9 +436,9 @@
 			<!-- CHAT STUFF -->
 
 			<ul id="chat-nav" class="nav nav-tabs nav-justified">
-			  <li id="Avesta-tab" class="active"><a href="#">Avesta &nbsp;<span class="badge">11</span></a></li>
-			  <li id="Nirvana-tab"><a href="#">Nirvana &nbsp;<span class="badge">14</span></a></li>
-			  <li id="Valhalla-tab"><a href="#">Valhalla &nbsp;<span class="badge">9</span></a></li>
+			  <li id="Avesta-tab" class="active"><a href="#">Avesta &nbsp;<span class="badge">0</span></a></li>
+			  <li id="Nirvana-tab"><a href="#">Nirvana &nbsp;<span class="badge">0</span></a></li>
+			  <li id="Valhalla-tab"><a href="#">Valhalla &nbsp;<span class="badge">0</span></a></li>
 			  <li id="settings-tab"><a href="#">Settings &nbsp;<span id="settings-logo" class="glyphicon glyphicon-wrench"></span></a></li>
 			</ul>
 			<div id="chat-box">

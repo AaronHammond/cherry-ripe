@@ -46,7 +46,6 @@ if (process.env.ENVIRON == 'HEROKU'){
 	});	
 }
 else {
-	// curl -k https://localhost:8000/
 	var https = require('https');
 	var fs = require('fs');
 
