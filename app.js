@@ -39,8 +39,13 @@ app.get('/', routes.index);
 app.get('/chat', routes.chat);
 app.get('/users', user.list);
 
-
-if ('development' == app.get('env')) {
+// this is because of heroku's kickass https provisioning
+if (process.env.ENVIRON == 'HEROKU'){
+	server = http.createServer(app).listen(app.get('port'), function(){
+  		console.log('Express server listening on port ' + app.get('port'));
+	});	
+}
+else {
 	// curl -k https://localhost:8000/
 	var https = require('https');
 	var fs = require('fs');
@@ -53,12 +58,6 @@ if ('development' == app.get('env')) {
 	server = https.createServer(options, app).listen(8433, function(){
 		console.log('Express serving https on port 8433');
 	})
-}
-// this is because of heroku's kickass https provisioning...
-else {
-	server = http.createServer(app).listen(app.get('port'), function(){
-  		console.log('Express server listening on port ' + app.get('port'));
-	});	
 }
 
 var io = require('socket.io').listen(server);
