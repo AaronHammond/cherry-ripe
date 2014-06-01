@@ -39,11 +39,28 @@ app.get('/', routes.index);
 app.get('/chat', routes.chat);
 app.get('/users', user.list);
 
-http_app = http.createServer(app).listen(app.get('port'), function(){
-  console.log('Express server listening on port ' + app.get('port'));
-});
+// this is because of heroku's kickass https provisioning...
+if (app.get('env') == 'production'){
+	server = http.createServer(app).listen(app.get('port'), function(){
+  		console.log('Express server listening on port ' + app.get('port'));
+	});	
+}
+else {
+	// curl -k https://localhost:8000/
+	var https = require('https');
+	var fs = require('fs');
 
-var io = require('socket.io').listen(http_app);
+	var options = {
+	  key: fs.readFileSync('test-certs/server.key'),
+	  cert: fs.readFileSync('test-certs/server.crt')
+	};
+
+	server = https.createServer(options, app).listen(8433, function(){
+		console.log('Express serving https on port 8433');
+	})
+}
+
+var io = require('socket.io').listen(server);
 
 // rooms which are currently available in chat
 redisClient.lpush('rooms', 'Valhalla', 'Nirvana', 'Avesta');
